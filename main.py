@@ -9,29 +9,13 @@ def visualize(image):
     # plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
     plt.show()
 
-def contour_detection(image_copy):
-    gray = cv2.cvtColor(image_copy, cv2.COLOR_BGR2GRAY)
-    ret1, binary = cv2.threshold(gray,125,255,0)
-    # find and draw shapes
-    ret2, contours, hierarchy = cv2.findContours(binary, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    image_copy2 = np.copy(image_copy)
-    coutour_l = []
-    for contour in contours: 
-        peri = cv2.arcLength(contour,True)
-        approx = cv2.approxPolyDP(contour, 0.01 * peri, True)
-        # add objects to contour list with vertices greater than or equal to 6
-        if len(approx) >= 6:
-            coutour_l.append(contour)  
-    all_contours = cv2.drawContours(image_copy2, coutour_l,  -1, (0,255,0), 2)
-    return binary, contours, all_contours
-
 def rotate(template, degree):
     rows,cols = template.shape
     M = cv2.getRotationMatrix2D((cols/2,rows/2), degree,1)
     r_template = cv2.warpAffine(template,M,template.shape[::-1])
     return r_template
 
-# /** object detection using template matching **/
+#  /** object detection using template matching **/
 def get_template_image():
     size = (w, h, channels) = (20, 20, 3)
     template_image = np.zeros(size, dtype=np.uint8)
@@ -72,7 +56,7 @@ def detect(img, template):
     res = cv2.matchTemplate(img_gray,rotate(template, best_rotation_deg.keys()[0]),cv2.TM_CCORR_NORMED)
     loc = np.where(res >= best_rotation_deg.values()[0])
     pts = zip(*loc[::-1])
-    # print best_rotation_deg
+    print best_rotation_deg
     # print best_rotation_deg.values()[0]
     # res = cv2.matchTemplate(img_gray,template,cv2.TM_CCORR_NORMED) 
     # threshold = 0.8
@@ -82,21 +66,24 @@ def detect(img, template):
     #     pts = zip(*loc[::-1])
     #     threshold -= 0.02
     # print threshold
-    print len(pts)
+    # print len(pts)
     for pt in pts:
-        cv2.rectangle(img, pt, (pt[0] + w, pt[1] + h), (255,0,0), 1)
+        bounding_box = cv2.rectangle(img, pt, (pt[0] + w, pt[1] + h), (255,0,0), 1)
+        print bounding_box.shape
     # print pts
+    import code
+    code.interact(local=dict(globals(), **locals()))
     return pts
 
 def run():
     # Read source image in bgr 
-    img = cv2.imread('images/DSC02426.JPG')
+    img = cv2.imread('images/DSC01836.JPG')
     # get template image for searching gcp
     template = get_template_image()
-    rows,cols = template.shape
-    # M = cv2.getRotationMatrix2D((cols/2,rows/2),0,1)
-    M = cv2.getRotationMatrix2D((cols/2,rows/2),135,1)
-    r_template = cv2.warpAffine(template,M,template.shape[::-1])
+    # rows,cols = template.shape
+    # # M = cv2.getRotationMatrix2D((cols/2,rows/2),0,1)
+    # M = cv2.getRotationMatrix2D((cols/2,rows/2),135,1)
+    # r_template = cv2.warpAffine(template,M,template.shape[::-1])
     # visualize(r_template)
     # create a copy of the source image 
     image_copy = img.copy()
@@ -109,20 +96,8 @@ def run():
     points = detect(down1, template)
     visualize(down1)
 
-
-
-
 if __name__ == '__main__':
     run()
-
-
-# match_img = np.array([[ 0, 0, 0, 0, 0
-#                         0, 255, 0, 0, 0
-#                         0, 255, 0, 0, 0
-#                         0, 255, 255, 255, 0
-#                         0, 0, 0, 0, 0    
-                        
-# ]])
 
 
 # Debugger Code
