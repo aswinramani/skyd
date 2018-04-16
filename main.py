@@ -1,7 +1,8 @@
+import os
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas
+import pandas as pd
 
 def visualize(image):
     plt.rcParams['figure.figsize'] = (7,7)
@@ -42,7 +43,7 @@ def verify(img_gray, template, r_list):
         result[r] = round(threshold + mod, 2)
     return result
             
-def detect(img, template):
+def detect(img, template, display=False):
     w, h = template.shape[::-1]
     image_copy = img.copy()
     img_gray = cv2.cvtColor(image_copy, cv2.COLOR_BGR2GRAY)
@@ -56,45 +57,42 @@ def detect(img, template):
     res = cv2.matchTemplate(img_gray,rotate(template, best_rotation_deg.keys()[0]),cv2.TM_CCORR_NORMED)
     loc = np.where(res >= best_rotation_deg.values()[0])
     pts = zip(*loc[::-1])
-    print best_rotation_deg
-    # print best_rotation_deg.values()[0]
-    # res = cv2.matchTemplate(img_gray,template,cv2.TM_CCORR_NORMED) 
-    # threshold = 0.8
-    # pts = []
-    # while len(pts) < 1:
-    #     loc = np.where(res >= threshold)
-    #     pts = zip(*loc[::-1])
-    #     threshold -= 0.02
-    # print threshold
-    # print len(pts)
     for pt in pts:
         bounding_box = cv2.rectangle(img, pt, (pt[0] + w, pt[1] + h), (255,0,0), 1)
-        print bounding_box.shape
-    # print pts
-    import code
-    code.interact(local=dict(globals(), **locals()))
+    if display:
+        visualize(img)
     return pts
 
 def run():
-    # Read source image in bgr 
-    img = cv2.imread('images/DSC01836.JPG')
-    # get template image for searching gcp
-    template = get_template_image()
-    # rows,cols = template.shape
-    # # M = cv2.getRotationMatrix2D((cols/2,rows/2),0,1)
-    # M = cv2.getRotationMatrix2D((cols/2,rows/2),135,1)
-    # r_template = cv2.warpAffine(template,M,template.shape[::-1])
-    # visualize(r_template)
-    # create a copy of the source image 
-    image_copy = img.copy()
-    # Image Pyramids
-    # up1 = cv2.pyrUp(image_copy)
-    down1 = cv2.pyrDown(image_copy)
-    # down2 = cv2.pyrDown(down1)
-    # # down3 = cv2.pyrDown(down2)
-    # Object Detection
-    points = detect(down1, template)
-    visualize(down1)
+    src_dir = "images/"
+    names = []
+    locations = []
+    count = 0
+    # file_path = os.path.join(directory, file_name)
+    imageList = filter(lambda x: x.split(".")[1] == "JPG", os.listdir(src_dir))
+    for image in imageList:
+        # Step 1 Read source image in bgr 
+        img = cv2.imread(src_dir + image)
+        # Step 2 Add template image for searching L shaped objects 
+        template = get_template_image()
+        # create a copy of the source image 
+        image_copy = img.copy()
+        # Image Pyramids
+        # Step 3 Rescale Image (here we downsample our image)
+        down1 = cv2.pyrDown(image_copy)
+        # Step 4 Detect object using template matching
+        points = map(lambda x: [x[0],x[1]], detect(down1, template))
+        names.append(image)
+        locations.append(points)
+
+    df = pd.DataFrame(data={"Location": locations}, index=names)
+    df.index.name = "FileNames"
+    output_dir = "detections"
+    output_file_name = "positions.csv"
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
+    file_path = os.path.join(output_dir, output_file_name)
+    df.to_csv(file_path, encoding='utf-8')
 
 if __name__ == '__main__':
     run()
