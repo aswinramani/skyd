@@ -29,6 +29,10 @@ def get_matching_methods():
             'cv2.TM_CCORR_NORMED', 'cv2.TM_SQDIFF', 'cv2.TM_SQDIFF_NORMED']
     return methods
 
+def draw_rect(img, pts, w, h):
+    for pt in pts:
+        bounding_box = cv2.rectangle(img, pt, (pt[0] + w, pt[1] + h), (255,0,0), 1)
+
 def verify(img_gray, template, r_list):
     result = {}
     for r in r_list:
@@ -48,7 +52,7 @@ def detect(img, template, display=False):
     image_copy = img.copy()
     img_gray = cv2.cvtColor(image_copy, cv2.COLOR_BGR2GRAY)
     # blur = cv2.GaussianBlur(img_gray, (5,5), 0)
-    r_list = [0,45,90,135,180]
+    r_list = [0,45,90,135,180,225,270,315]
     result = verify(img_gray, template, r_list) 
     best_rotation_deg = dict((key,value) for key, value in result.iteritems() if value == max(result.values()))
     if len(best_rotation_deg) > 1:
@@ -57,9 +61,8 @@ def detect(img, template, display=False):
     res = cv2.matchTemplate(img_gray,rotate(template, best_rotation_deg.keys()[0]),cv2.TM_CCORR_NORMED)
     loc = np.where(res >= best_rotation_deg.values()[0])
     pts = zip(*loc[::-1])
-    for pt in pts:
-        bounding_box = cv2.rectangle(img, pt, (pt[0] + w, pt[1] + h), (255,0,0), 1)
     if display:
+        draw_rect(img, pts, w, h)
         visualize(img)
     return pts
 
@@ -67,26 +70,27 @@ def run():
     src_dir = "images/"
     names = []
     locations = []
-    count = 0
-    # file_path = os.path.join(directory, file_name)
-    imageList = filter(lambda x: x.split(".")[1] == "JPG", os.listdir(src_dir))
-    for image in imageList:
+    image_list = filter(lambda x: x.split(".")[1] == "JPG", os.listdir(src_dir))
+    for image in image_list:
         # Step 1 Read source image in bgr 
         img = cv2.imread(src_dir + image)
         # Step 2 Add template image for searching L shaped objects 
         template = get_template_image()
+        w,h = template.shape[::-1] 
         # create a copy of the source image 
         image_copy = img.copy()
         # Image Pyramids
-        # Step 3 Rescale Image (here we downsample our image)
+        # Step 3 Rescale Image (here we downsize our image)
         down1 = cv2.pyrDown(image_copy)
         # Step 4 Detect object using template matching
-        points = map(lambda x: [x[0],x[1]], detect(down1, template))
+        down1_points = detect(down1, template)
+        # Step 5 Compute locations for source image
+        points = map(lambda x: ((2*x[0] + (2*x[0] + w))/2,(2*x[1] + (2*x[1] + h))/2), down1_points)
         names.append(image)
         locations.append(points)
 
     df = pd.DataFrame(data={"Location": locations}, index=names)
-    df.index.name = "FileNames"
+    df.index.name = "FileName"
     output_dir = "detections"
     output_file_name = "positions.csv"
     if not os.path.exists(output_dir):
