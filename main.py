@@ -80,7 +80,7 @@ def run():
         # create a copy of the source image 
         image_copy = img.copy()
         # Image Pyramids
-        # Step 3 Rescale Image (here we downsize our image)
+        # Step 3 Rescale Image (here we downscale our image)
         down1 = cv2.pyrDown(image_copy)
         # Step 4 Detect object using template matching
         down1_points = detect(down1, template)
