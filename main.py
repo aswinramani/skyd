@@ -49,23 +49,42 @@ def detect(img, template, display=False):
     image_copy = img.copy()
     img_gray = cv2.cvtColor(image_copy, cv2.COLOR_BGR2GRAY)
     # blur = cv2.GaussianBlur(img_gray, (5,5), 0)
-    r_list = [0,45,90,135,180]
-    result = verify(img_gray, template, r_list) 
-    # best_rotation_deg = dict((key,value) for key, value in result.iteritems() if value == max(result.values())) # py2.7
-    best_rotation_deg = dict((key,value) for key, value in result.items() if value == max(result.values()))
-    if len(best_rotation_deg) > 1:
-        from collections import OrderedDict
-        best_rotation_deg = OrderedDict(sorted(best_rotation_deg.items(), key=lambda t: t[0]))  
-    keys = list(best_rotation_deg.keys())
-    values = list(best_rotation_deg.values()) 
-    # res = cv2.matchTemplate(img_gray,rotate(template, best_rotation_deg.keys()[0]),cv2.TM_CCORR_NORMED)# py2.7
-    res = cv2.matchTemplate(img_gray,rotate(template, keys[0]),cv2.TM_CCORR_NORMED)
-    # loc = np.where(res >= best_rotation_deg.values()[0]) # py2.7
-    loc = np.where(res >= values[0])
-    # pts = zip(*loc[::-1]) # py2.7
-    pts = list(zip(*loc[::-1]))
-    for pt in pts:
-        bounding_box = cv2.rectangle(img, pt, (pt[0] + w, pt[1] + h), (255,0,0), 1)
+    # r_list = [0,45,90,135,180]
+    # result = verify(img_gray, template, r_list) 
+    # # best_rotation_deg = dict((key,value) for key, value in result.iteritems() if value == max(result.values())) # py2.7
+    # best_rotation_deg = dict((key,value) for key, value in result.items() if value == max(result.values()))
+    # if len(best_rotation_deg) > 1:
+    #     from collections import OrderedDict
+    #     best_rotation_deg = OrderedDict(sorted(best_rotation_deg.items(), key=lambda t: t[0]))  
+    # keys = list(best_rotation_deg.keys())
+    # values = list(best_rotation_deg.values()) 
+    # # res = cv2.matchTemplate(img_gray,rotate(template, best_rotation_deg.keys()[0]),cv2.TM_CCORR_NORMED)# py2.7
+    # res = cv2.matchTemplate(img_gray,rotate(template, keys[0]),cv2.TM_CCORR_NORMED)
+    # # loc = np.where(res >= best_rotation_deg.values()[0]) # py2.7
+    # loc = np.where(res >= values[0])
+    # # pts = zip(*loc[::-1]) # py2.7
+    # pts = list(zip(*loc[::-1]))
+    # for pt in pts:
+    #     bounding_box = cv2.rectangle(img, pt, (pt[0] + w, pt[1] + h), (255,0,0), 1)
+    r_list = [0,45,90,135,180,225,270,315]
+    result = {}
+    points = {}
+    for r in r_list:
+        res = cv2.matchTemplate(img_gray,rotate(template, r),cv2.TM_CCORR_NORMED)
+        threshold = np.max(res) - np.std(res)
+        loc = np.where(res >= threshold)
+        result[r] = threshold
+        points[r] = list(zip(*loc[::-1]))
+    # from collections import OrderedDict
+    # sorted_results = OrderedDict(sorted(result.items(), key=lambda t: t[1], reverse=True))
+    sorted_results = sorted(result.items(), key=lambda t: t[1], reverse=True)
+    max_thresh = sorted_results[0][1]
+    pts_2d = list(map(lambda x:  points[x[0]], list(filter(lambda x:  max_thresh - x[1] < 0.02, sorted_results))))
+    pts = []
+    for pts_1d in pts_2d:
+        for pt in pts_1d:
+            cv2.rectangle(img, pt, (pt[0] + w, pt[1] + h), (255,0,0), 1)
+            pts.append(pt)
     if display:
         visualize(img)
     return pts
@@ -110,21 +129,24 @@ def run():
     # dev()
     src_dir = "images/"
     names = []
-    # locations = []
+    locations = []
     imageList = list(filter(lambda x: x.split(".")[1] == "JPG", os.listdir(src_dir)))
     for image in imageList:
         # Step 1 Read source image in bgr 
         img = cv2.imread(src_dir + image)
         # Step 2 Add template image for searching L shaped objects 
         template = get_template_image()
+        w,h = template.shape[::-1] 
         # create a copy of the source image 
         image_copy = img.copy()
         # Image Pyramids
         # Step 3 Rescale Image (here we downsample our image)
         down1 = cv2.pyrDown(image_copy)
         # Step 4 Detect object using template matching
+        down1_points = detect(down1, template)
         # points = map(lambda x: [x[0],x[1]], detect(down1, template)) # for py2.7
-        points = list(map(lambda x: [x[0],x[1]], detect(down1, template))) # for py3.6
+        # points = list(map(lambda x: [x[0],x[1]], down1_points)) # for py3.6
+        points = list(map(lambda x: ((2*x[0] + (2*x[0] + w))/2,(2*x[1] + (2*x[1] + h))/2), down1_points))
         names.append(image)
         locations.append(points)
 
