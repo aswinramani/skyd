@@ -42,7 +42,7 @@ def verify(img_gray, template, r_list):
         mod = 0.02
         while len(pts) < 3:
             loc = np.where(res >= threshold)
-            pts = zip(*loc[::-1])
+            pts = list(zip(*loc[::-1]))
             threshold = round(threshold - mod, 2)
         result[r] = round(threshold + mod, 2)
     return result
@@ -54,13 +54,15 @@ def detect(img, template, display=False):
     # blur = cv2.GaussianBlur(img_gray, (5,5), 0)
     r_list = [0,45,90,135,180,225,270,315]
     result = verify(img_gray, template, r_list) 
-    best_rotation_deg = dict((key,value) for key, value in result.iteritems() if value == max(result.values()))
+    best_rotation_deg = dict((key,value) for key, value in result.items() if value == max(result.values()))
     if len(best_rotation_deg) > 1:
         from collections import OrderedDict
-        best_rotation_deg = OrderedDict(sorted(best_rotation_deg.items(), key=lambda t: t[0]))    
-    res = cv2.matchTemplate(img_gray,rotate(template, best_rotation_deg.keys()[0]),cv2.TM_CCORR_NORMED)
-    loc = np.where(res >= best_rotation_deg.values()[0])
-    pts = zip(*loc[::-1])
+        best_rotation_deg = OrderedDict(sorted(best_rotation_deg.items(), key=lambda t: t[0]))         
+    keys = list(best_rotation_deg.keys())
+    values = list(best_rotation_deg.values())
+    res = cv2.matchTemplate(img_gray,rotate(template, keys[0]),cv2.TM_CCORR_NORMED)
+    loc = np.where(res >= values[0])
+    pts = list(zip(*loc[::-1]))
     if display:
         draw_rect(img, pts, w, h)
         visualize(img)
@@ -85,7 +87,7 @@ def run():
         # Step 4 Detect object using template matching
         down1_points = detect(down1, template)
         # Step 5 Compute locations for source image
-        points = map(lambda x: ((2*x[0] + (2*x[0] + w))/2,(2*x[1] + (2*x[1] + h))/2), down1_points)
+        points = list(map(lambda x: ((2*x[0] + (2*x[0] + w))/2,(2*x[1] + (2*x[1] + h))/2), down1_points))
         names.append(image)
         locations.append(points)
 
