@@ -1,8 +1,8 @@
 ### Object Detection
 
 #### Major Changes Made:
-1. Implemented function to read all inputs from source directory.
-2. Generated template image for searching target objects.
+1. Generated template image for searching target objects.
+2. Implemented function to read all inputs from source directory.
 3. Generated image pyramids from source image.
 4. Applied rotational transformations to template for better detection regardless of orientation.
 5. Implemented template matching technique for searching specific objects.

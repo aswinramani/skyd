@@ -32,53 +32,43 @@ def get_matching_methods():
 def draw_rect(img, pts, w, h):
     for pt in pts:
         bounding_box = cv2.rectangle(img, pt, (pt[0] + w, pt[1] + h), (255,0,0), 1)
-
-def verify(img_gray, template, r_list):
-    result = {}
-    for r in r_list:
-        res = cv2.matchTemplate(img_gray,rotate(template, r),cv2.TM_CCORR_NORMED)
-        pts = []
-        threshold = 0.8
-        mod = 0.02
-        while len(pts) < 3:
-            loc = np.where(res >= threshold)
-            pts = list(zip(*loc[::-1]))
-            threshold = round(threshold - mod, 2)
-        result[r] = round(threshold + mod, 2)
-    return result
             
 def detect(img, template, display=False):
     w, h = template.shape[::-1]
     image_copy = img.copy()
     img_gray = cv2.cvtColor(image_copy, cv2.COLOR_BGR2GRAY)
-    # blur = cv2.GaussianBlur(img_gray, (5,5), 0)
     r_list = [0,45,90,135,180,225,270,315]
-    result = verify(img_gray, template, r_list) 
-    best_rotation_deg = dict((key,value) for key, value in result.items() if value == max(result.values()))
-    if len(best_rotation_deg) > 1:
-        from collections import OrderedDict
-        best_rotation_deg = OrderedDict(sorted(best_rotation_deg.items(), key=lambda t: t[0]))         
-    keys = list(best_rotation_deg.keys())
-    values = list(best_rotation_deg.values())
-    res = cv2.matchTemplate(img_gray,rotate(template, keys[0]),cv2.TM_CCORR_NORMED)
-    loc = np.where(res >= values[0])
-    pts = list(zip(*loc[::-1]))
+    result = {}
+    points = {}
+    for r in r_list:
+        res = cv2.matchTemplate(img_gray,rotate(template, r),cv2.TM_CCORR_NORMED)
+        threshold = np.max(res) - np.std(res)
+        loc = np.where(res >= threshold)
+        result[r] = threshold
+        points[r] = list(zip(*loc[::-1]))
+    sorted_results = sorted(result.items(), key=lambda t: t[1], reverse=True)
+    max_thresh = sorted_results[0][1]
+    pts_2d = list(map(lambda x:  points[x[0]], list(filter(lambda x:  max_thresh - x[1] < 0.02, sorted_results))))
+    pts = []
+    for pts_1d in pts_2d:
+        for pt in pts_1d:
+            pts.append(pt)
     if display:
         draw_rect(img, pts, w, h)
         visualize(img)
     return pts
 
 def run():
+    # Step 1 Add template image for searching target object
+    template = get_template_image()
+    w,h = template.shape[::-1]
     src_dir = "images/"
     names = []
     locations = []
     image_list = list(filter(lambda x: x.split(".")[1] == "JPG", os.listdir(src_dir)))
     for image in image_list:
-        # Step 1 Read source image in bgr 
-        img = cv2.imread(src_dir + image)
-        # Step 2 Add template image for searching L shaped objects 
-        template = get_template_image()
-        w,h = template.shape[::-1] 
+        # Step 2 Read source image in bgr 
+        img = cv2.imread(src_dir + image) 
         # create a copy of the source image 
         image_copy = img.copy()
         # Image Pyramids
