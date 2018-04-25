@@ -72,7 +72,7 @@ def run():
     src_dir = "images/"
     names = []
     locations = []
-    image_list = filter(lambda x: x.split(".")[1] == "JPG", os.listdir(src_dir))
+    image_list = list(filter(lambda x: x.split(".")[1] == "JPG", os.listdir(src_dir)))
     for image in image_list:
         # Step 1 Read source image in bgr 
         img = cv2.imread(src_dir + image)
