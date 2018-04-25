@@ -79,40 +79,39 @@ def dev():
     t_gray = cv2.cvtColor(template_image, cv2.COLOR_BGR2GRAY)
     w, h = t_gray.shape[::-1]
     # visualize(t_gray)
-    img = cv2.imread("images/DSC01798.JPG")
+    img = cv2.imread("images/DSC02426.JPG")
     image_copy = img.copy()
     # Step 3 Rescale Image (here we downsample our image)
     down1 = cv2.pyrDown(image_copy)
     img_gray = cv2.cvtColor(down1, cv2.COLOR_BGR2GRAY)
     r_list = [0,45,90,135,180,225,270,315]
     result = {}
+    points = {}
     for r in r_list:
         res = cv2.matchTemplate(img_gray,rotate(t_gray, r),cv2.TM_CCORR_NORMED)
         threshold = np.max(res) - np.std(res)
+        loc = np.where(res >= threshold)
         result[r] = threshold
-    # import code
-    # code.interact(local=dict(globals(), **locals()))
+        points[r] = list(zip(*loc[::-1]))
     # from collections import OrderedDict
-    # sorted_results = OrderedDict(sorted(result.items(), key=lambda t: t[1]))
-    # for result in sorted_results:
-
-    # best_rotation_deg = dict((key,value) for key, value in result.iteritems() if value == max(result.values()))
-    # res = cv2.matchTemplate(img_gray,rotate(t_gray, best_rotation_deg.keys()[0]),cv2.TM_CCORR_NORMED)
-    # loc = np.where(res >= best_rotation_deg.values()[0])
-    # pts = zip(*loc[::-1])
-    # for pt in pts:
-    #     cv2.rectangle(down1, pt, (pt[0] + w, pt[1] + h), (255,0,0), 1)
-
+    # sorted_results = OrderedDict(sorted(result.items(), key=lambda t: t[1], reverse=True))
+    sorted_results = sorted(result.items(), key=lambda t: t[1], reverse=True)
+    max_thresh = sorted_results[0][1]
+    pts_2d = list(map(lambda x:  points[x[0]], list(filter(lambda x:  max_thresh - x[1] < 0.02, sorted_results))))
+    pts = []
+    for pts_1d in pts_2d:
+        for pt in pts_1d:
+            cv2.rectangle(down1, pt, (pt[0] + w, pt[1] + h), (255,0,0), 1)
+            pts.append(pt)
+    import code
+    code.interact(local=dict(globals(), **locals()))
     # visualize(down1)
 def run():
     # dev()
     src_dir = "images/"
     names = []
-    locations = []
-    count = 0
-    # file_path = os.path.join(directory, file_name)
-    # imageList = ["DSC01798.JPG"]
-    imageList = filter(lambda x: x.split(".")[1] == "JPG", os.listdir(src_dir))
+    # locations = []
+    imageList = list(filter(lambda x: x.split(".")[1] == "JPG", os.listdir(src_dir)))
     for image in imageList:
         # Step 1 Read source image in bgr 
         img = cv2.imread(src_dir + image)
